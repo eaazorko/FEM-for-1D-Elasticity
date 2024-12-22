@@ -1,0 +1,67 @@
+% Equation: -u''(x) = f(x), x in [0,1], with u(0)=u(1)=0
+% Example: f(x) = pi^2 * sin(pi*x), exact solution u(x) = sin(pi*x)
+
+% Parameters
+N = 10;              % Number of elements
+a = 0; b = 1;        % Domain [a, b]
+nodes = linspace(a, b, N+1);  % Node positions
+h = (b - a)/N;       % Mesh size
+
+%% Define the source function f(x) = pi^2 * sin(pi x)
+f = @(x) (pi^2) * sin(pi * x);
+
+% Exact Solution for Comparison
+u_exact = @(x) sin(pi * x);
+
+% Assemble the Stiffness Matrix Q
+% Q is a (N-1) x (N-1) tridiagonal matrix
+Q = (2/h) * diag(ones(N-1,1)) + (-1/h) * diag(ones(N-2,1),1) + (-1/h) * diag(ones(N-2,1),-1);
+
+% Assemble the Load Vector c
+% c is a (N-1) x 1 vector
+c = zeros(N-1,1);
+for i = 2:N
+    x_i = nodes(i);
+    c(i-1) = h * f(x_i);
+end
+
+% Solve the Linear System QU = c
+U = Q \ c;
+
+% Construct the Full Numerical Solution Including Boundary Conditions
+U_full = zeros(N+1,1);
+U_full(2:N) = U;
+
+% Compute the Exact Solution at Nodes
+U_exact_nodes = u_exact(nodes)';
+
+% Compute Maximum Error
+max_error = max(abs(U_full - U_exact_nodes));
+
+% Display Maximum Error
+fprintf('Maximum Error with N = %d elements: %.6f\n', N, max_error);
+disp('Interior Nodal Values (U):');
+for j = 1:N-1
+    fprintf('u(%0.4f) = %0.6f\n', nodes(j+1), U(j));
+end
+disp('Full Solution Including Boundary Conditions (U_full):');
+for j = 1:N+1
+    fprintf('u(%0.4f) = %0.6f\n', nodes(j), U_full(j));
+end
+
+%% Visualization
+x_fine = linspace(a, b, 1000);
+u_exact_fine = u_exact(x_fine);
+
+% Interpolate the numerical solution for smooth plotting
+u_numerical_fine = interp1(nodes, U_full, x_fine, 'linear');
+
+figure;
+plot(x_fine, u_exact_fine, 'b-', 'LineWidth', 2); hold on;
+plot(x_fine, u_numerical_fine, 'r--', 'LineWidth', 2);
+plot(nodes, U_full, 'ko', 'MarkerSize', 6, 'MarkerFaceColor', 'k');
+xlabel('x');
+ylabel('u(x)');
+title('Comparison of Exact and FEM Numerical Solutions');
+legend('Exact Solution', 'FEM Numerical Solution', \\'Nodal Values', 'Location', 'Best');
+grid on;
